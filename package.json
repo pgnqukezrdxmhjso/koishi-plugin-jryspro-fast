@@ -1,16 +1,23 @@
 {
-  "name": "koishi-plugin-jryspro",
-  "version": "2.1.12",
+  "name": "koishi-plugin-jryspro-fast",
+  "version": "2.2.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
-  "homepage": "https://github.com/twiyin0/koishi-plugin-jryspro.git",
+  "homepage": "https://github.com/pgnqukezrdxmhjso/koishi-plugin-jryspro-fast",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/twiyin0/koishi-plugin-jryspro.git"
+    "url": "git+https://github.com/pgnqukezrdxmhjso/koishi-plugin-jryspro-fast.git"
+  },
+  "scripts": {
+    "build": "cd ../../ && yarn build jryspro-fast",
+    "pub": "cd ../../ && yarn pub jryspro-fast",
+    "fastPub": "cd ../../ && yarn bump -3 jryspro-fast && yarn build jryspro-fast && yarn pub jryspro-fast",
+    "test": "node src/test/test.js"
   },
   "contributors": [
     "Twiyin0 <twiyin0@outlook.com>",
-    "vlssu <cmy1305300769@126.com>"
+    "vlssu <cmy1305300769@126.com>",
+    "pgnqukezrdxmhjso"
   ],
   "files": [
     "lib",
@@ -24,7 +31,8 @@
     },
     "service": {
       "required": [
-        "puppeteer"
+        "http",
+        "vercelSatoriPngService"
       ],
       "optional": [
         "database"
@@ -40,8 +48,13 @@
     "今日运势"
   ],
   "peerDependencies": {
-    "@satorijs/element": "^1.1.3",
-    "koishi": "^4.16.0",
-    "koishi-plugin-puppeteer": "^3.9.0"
+    "koishi": "^4.16.0"
+  },
+  "devDependencies": {
+    "koishi-plugin-vercel-satori-png-service": "^0.1.5"
+  },
+  "dependencies": {
+    "file-type": "^21.0.0",
+    "sharp": "^0.34.3"
   }
 }

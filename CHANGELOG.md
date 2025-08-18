@@ -165,7 +165,7 @@
 * 修改了默认模式2，为新版竖屏模式，同时-N(大写)也可以输出新版jrys
 ## 说明
 * 背景图采用竖屏imgurl
-* subimgurl改为可选，不用配置subimgApi也能用jryspro了
+* subimgurl改为可选，不用配置subimgApi也能用jryspro-fast了
 
 ## v2.0.2
 ## 修复
@@ -220,3 +220,9 @@
 ### 新增
 * 新增图片输出质量配置项，之前渲染图输出的图片都太大了
 * 图片输出质量拉到顶时输出png格式，无损
+
+## v2.2.0
+
+### 修改
+
+* 修改必备插件为vercelSatoriPngService。没有vercelSatoriPngService渲染不了图片。
