@@ -226,3 +226,9 @@
 ### 修改
 
 * 修改必备插件为vercelSatoriPngService。没有vercelSatoriPngService渲染不了图片。
+
+## v2.2.2
+
+### 优化
+
+* 图片处理库sharp替换为更好的wasm-vips

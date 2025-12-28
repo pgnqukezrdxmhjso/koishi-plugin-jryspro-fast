@@ -3,7 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 import type * as FileType from "file-type";
-import sharp, { Metadata, Sharp } from "sharp";
+import Vips from "wasm-vips";
 
 import { Context, h, Logger, Random, Schema, Session } from "koishi";
 // noinspection ES6UnusedImports
@@ -101,24 +101,30 @@ export interface JrysItem {
   signText: string;
   unsignText: string;
 }
+interface ImgMetaData {
+  width: number;
+  height: number;
+}
 
-export function apply(ctx: Context, config: Config) {
-  let fileType: typeof FileType;
+export async function apply(ctx: Context, config: Config) {
+  let fileType: typeof FileType = await import("file-type");
+  const vips = await Vips();
+
   const template = fs
-    .readFileSync(path.join(__dirname, "./template.html"), "utf8")
+    .readFileSync(path.join(__dirname, "../assets/template.html"), "utf8")
     .replace(/[\s\S]*<body[^>]*>([\s\S]*)<\/body>[\s\S]*/, "$1")
     .trim();
   const template2 = fs
-    .readFileSync(path.join(__dirname, "./template2.html"), "utf8")
+    .readFileSync(path.join(__dirname, "../assets/template2.html"), "utf8")
     .replace(/[\s\S]*<body[^>]*>([\s\S]*)<\/body>[\s\S]*/, "$1")
     .trim();
   const defaultAvatar =
     `data:image/png;base64,` +
-    Buffer.from(fs.readFileSync(path.join(__dirname, "./avatar.png"))).toString(
-      "base64",
-    );
+    Buffer.from(
+      fs.readFileSync(path.join(__dirname, "../assets/avatar.png")),
+    ).toString("base64");
   const jrysJson: JrysItem[] = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "./jrys.json"), "utf8"),
+    fs.readFileSync(path.join(__dirname, "../assets/jrys.json"), "utf8"),
   );
 
   ctx
@@ -300,8 +306,8 @@ export function apply(ctx: Context, config: Config) {
           });
 
           width += Math.round(
-            ((height - 14) / background.metadata.height) *
-              background.metadata.width,
+            ((height - 14) / background.metaData.height) *
+              background.metaData.width,
           );
 
           const replacedContent = template2
@@ -383,13 +389,6 @@ export function apply(ctx: Context, config: Config) {
       }
     });
 
-  async function loadFileType() {
-    if (!fileType) {
-      fileType = await import("file-type");
-    }
-    return fileType;
-  }
-
   function getUserKey(session: Session) {
     let etime = new Date().setHours(0, 0, 0, 0);
     let userId: number;
@@ -416,12 +415,15 @@ export function apply(ctx: Context, config: Config) {
     return jrysJson[getUserKey(session).key];
   }
 
-  async function downloadUrl(args: {
+  async function downloadUrl({
+    url,
+    cover,
+    needMetadata,
+  }: {
     url: string;
     cover?: { width: number; height: number };
     needMetadata?: boolean;
-  }): Promise<{ base64: string; metadata?: Metadata }> {
-    const { url, cover, needMetadata } = args;
+  }): Promise<{ base64: string; metaData?: ImgMetaData }> {
     if (/^data:/i.test(url)) {
       return { base64: url };
     }
@@ -435,63 +437,44 @@ export function apply(ctx: Context, config: Config) {
       throw "渲染失败，不知道发生了啥";
     }
 
-    await loadFileType();
     const imgType = await fileType.fileTypeFromBuffer(imgData);
 
-    let imgSharp: Sharp;
-    let metadata: Metadata;
-    const touchImgSharp = () => {
-      if (!imgSharp) {
-        imgSharp = sharp(imgData);
+    let img: Vips.Image;
+    let metaData: ImgMetaData;
+    const touchImg = () => {
+      if (!img) {
+        img = vips.Image.newFromBuffer(imgData);
       }
     };
 
     if (needMetadata) {
-      touchImgSharp();
-      metadata = await imgSharp.metadata();
+      touchImg();
+      metaData = {
+        width: img.width,
+        height: img.height,
+      };
     }
 
     if (cover) {
-      touchImgSharp();
-      if (!metadata) {
-        metadata = await imgSharp.metadata();
-      }
-      const newWh = {
-        width: cover.width,
+      img = vips.Image.thumbnailBuffer(imgData, cover.width, {
         height: cover.height,
-      };
-      if (metadata.height * (cover.width / metadata.width) < cover.height) {
-        newWh.width = Math.round(
-          metadata.width * (cover.height / metadata.height),
-        );
-      } else {
-        newWh.height = Math.round(
-          metadata.height * (cover.width / metadata.width),
-        );
-      }
-
-      imgSharp.resize(newWh);
-      imgSharp.extract({
-        left: Math.round((newWh.width - cover.width) / 2),
-        width: cover.width,
-        top: Math.round((newWh.height - cover.height) / 2),
-        height: cover.height,
+        crop: vips.Interesting.centre,
       });
 
       if (imgType.ext !== "webp") {
-        imgData = await imgSharp.toBuffer();
+        imgData = Buffer.from(img.pngsaveBuffer());
       }
     }
 
     let mime = imgType.mime;
     if (imgType.ext === "webp") {
-      touchImgSharp();
-      imgData = await imgSharp.png({}).toBuffer();
+      touchImg();
+      imgData = Buffer.from(img.pngsaveBuffer());
       mime = "image/png";
     }
     return {
       base64: `data:${mime};base64,` + imgData.toString("base64"),
-      metadata,
+      metaData,
     };
   }
 }

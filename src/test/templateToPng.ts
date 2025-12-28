@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 (async () => {
   const vercelSatoriPngService = new VercelSatoriPngService({} as any, {});
   await vercelSatoriPngService.start();
-  let html = await fs.readFile("../template.html", {
+  let html = await fs.readFile("../../assets/template.html", {
     encoding: "utf-8",
   });
   console.time("templateToPng");
