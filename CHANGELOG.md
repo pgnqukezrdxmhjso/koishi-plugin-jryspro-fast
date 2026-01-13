@@ -232,3 +232,15 @@
 ### 优化
 
 * 图片处理库sharp替换为更好的wasm-vips
+
+
+## v2.2.3
+
+### 修改
+
+* 修改必备插件为to-image-service。没有to-image-service渲染不了图片。
+
+### 优化
+
+* 样式
+* 支持图片质量

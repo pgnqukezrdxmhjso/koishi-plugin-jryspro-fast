@@ -18,10 +18,10 @@ jrys plugin for bella
 * -i 渲染图模式输出，这个是默认的
 
 > 如果你无法使用此插件，请检查
-> - 1. (使用命令时无反应，报错等)请检查指令是否有冲突或者是否正确安装vercelSatoriPngService
+> - 1. (使用命令时无反应，报错等)请检查指令是否有冲突或者是否正确安装to-image-service
 > - 2. 提示“发生未知错误”可能是没有获取到群友的uid，需要在数据库内刷新一下
 > - 3. “数据出错”之类的提示不是本插件的提示，可能你装了其他插件
-> - 4. 启用不了插件。请检查koishi版本，vercelSatoriPngService版本等是否再兼容范围内，或重启koishi，删除此插件依赖再尝试重装
+> - 4. 启用不了插件。请检查koishi版本，to-image-service版本等是否再兼容范围内，或重启koishi，删除此插件依赖再尝试重装
 
 随机文件夹内图片时请注意路径\`C:user/path/to/\`不要把后面的/忘了
 
@@ -35,7 +35,7 @@ jrys plugin for bella
 | `imgApi`      |(v1.3.0可用本地文件夹绝对路径)| 图片api地址，仅支持返回图片的api，不支持json等。由于我只制作了竖屏图片适配，建议使用竖屏的图片。在填写时不要把`http(s)://`忘了哦。                            |
 | `waitting`    |     | 是否开启等待提示，默认开启                                                                                           |
 | `defaultMode` |     | 默认输出模式，非以下参数默认为`0`                                                                                      |
-|               | `0` | 渲染输出-vercelSatoriPngService渲染输出                                                                                  |
+|               | `0` | 渲染输出to-image-service渲染输出                                                                                  |
 |               | `1` | 纯文本输出，仅输出文本                                                                                             |
 |               | `2` | (默认)新版竖屏模式输出                                                                               |
 |               | `3` | 图文输出，文字+图片的输出方式                                                                               |
@@ -56,6 +56,6 @@ jrys plugin for bella
 imgApi与subimgApi支持本地文件夹绝对路径和http(s)等网络api
 
 # TIP
-如果没有图片输出可以看看log时不时vercelSatoriPngService有问题
-确定vercelSatoriPngService没问题那就是api寄了或者本地路径没填对，别把最后面的/省了
+如果没有图片输出可以看看log时不时to-image-service有问题
+确定to-image-service没问题那就是api寄了或者本地路径没填对，别把最后面的/省了
 有问题就github开issues吧

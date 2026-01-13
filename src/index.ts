@@ -3,13 +3,12 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 import type * as FileType from "file-type";
-import Vips from "wasm-vips";
 
 import { Context, h, Logger, Random, Schema, Session } from "koishi";
 // noinspection ES6UnusedImports
 import {} from "koishi-plugin-rate-limit";
 // noinspection ES6UnusedImports
-import {} from "koishi-plugin-vercel-satori-png-service";
+import {} from "koishi-plugin-to-image-service";
 
 export const name = "jryspro-fast";
 
@@ -23,10 +22,10 @@ export const usage = `
 ## 使用说明
 
 > 如果你无法使用此插件，请检查
-> - 1. (使用命令时无反应，报错等)请检查指令是否有冲突或者是否正确安装vercelSatoriPngService
+> - 1. (使用命令时无反应，报错等)请检查指令是否有冲突或者是否正确安装to-image-service
 > - 2. 提示“发生未知错误”可能是没有获取到群友的uid，需要在数据库内刷新一下
 > - 3. “数据出错”之类的提示不是本插件的提示，可能你装了其他插件
-> - 4. 启用不了插件。请检查koishi版本，vercelSatoriPngService版本等是否再兼容范围内，或重启koishi，删除此插件依赖再尝试重装
+> - 4. 启用不了插件。请检查koishi版本，to-image-service版本等是否再兼容范围内，或重启koishi，删除此插件依赖再尝试重装
 
 随机文件夹内图片时请注意路径\`C:/user/path/to/\`不要把后面的/忘了
 
@@ -73,7 +72,13 @@ export const schema = Schema.object({
     .description(
       "[必填]渲染模式美图的api或文件夹(推荐纯竖屏),仅支持返回图片的api,不要忘记http(s)://",
     ),
-  imgQuality: Schema.percent().default(0.4).description("渲染图输出质量"),
+  imgQuality: Schema.number()
+    .role("slider")
+    .min(1)
+    .max(100)
+    .step(1)
+    .default(75)
+    .description("渲染图输出质量"),
   waiting: Schema.boolean()
     .default(true)
     .description("是否开启发送消息等待提示"),
@@ -93,7 +98,7 @@ export const schema = Schema.object({
     .description("默认头像URL(https?://或者file:///)"),
 });
 
-export const inject = ["vercelSatoriPngService", "database"];
+export const inject = ["toImageService", "database"];
 
 export interface JrysItem {
   fortuneSummary: string;
@@ -108,7 +113,6 @@ interface ImgMetaData {
 
 export async function apply(ctx: Context, config: Config) {
   let fileType: typeof FileType = await import("file-type");
-  const vips = await Vips();
 
   const template = fs
     .readFileSync(path.join(__dirname, "../assets/template.html"), "utf8")
@@ -254,6 +258,7 @@ export async function apply(ctx: Context, config: Config) {
             url: avatarUrl,
           });
 
+          const signTexts = dJson.signText.split("，");
           const replacedContent = template
             .replace(
               "https://dummyimage.com/389x399/6e2d6e/c2c5ed.png",
@@ -273,17 +278,15 @@ export async function apply(ctx: Context, config: Config) {
               `${dJson.fortuneSummary.toString().length > 8 ? dJson.fortuneSummary.toString().substring(0, 8) : dJson.fortuneSummary}&nbsp;&nbsp;${dJson.luckyStar}`,
             )
             .replace(
-              "你是一个一个签名啊啊啊啊啊啊啊啊啊啊啊啊",
-              `${dJson.signText.split("，")[0]}，${dJson.signText.split("，")[1]}<br/>${dJson.signText.split("，")[2]}，${dJson.signText.split("，")[3]}`,
+              "你是半个签名啊啊啊啊啊啊啊啊啊啊啊啊",
+              `${signTexts[0]}，${signTexts[1]}`,
+            )
+            .replace(
+              "你是另外半个签名啊啊啊啊啊啊啊啊啊啊啊啊",
+              `${signTexts[1]}，${signTexts[2]}`,
             );
-          const png = await ctx.vercelSatoriPngService.htmlToPng(
-            replacedContent,
-            {
-              width,
-              height,
-            },
-          );
-          return [h.image((await png.toArray())[0], "image/png")];
+          const png = await htmlToImg(replacedContent, width, height);
+          return [h.image(png, "image/png")];
         } catch (err) {
           logger.error(err);
           return "渲染失败，不知道发生了啥";
@@ -297,7 +300,7 @@ export async function apply(ctx: Context, config: Config) {
       ) {
         if (config.waiting) session.send("请稍等,正在查询……").then();
         try {
-          let width = 357;
+          let width = 370 + 7;
           const height = 1040;
 
           const background = await downloadUrl({
@@ -351,14 +354,8 @@ export async function apply(ctx: Context, config: Config) {
                 .map((s) => `<div>${s}</div>`)
                 .join(""),
             );
-          const png = await ctx.vercelSatoriPngService.htmlToPng(
-            replacedContent,
-            {
-              width,
-              height,
-            },
-          );
-          return [h.image((await png.toArray())[0], "image/png")];
+          const png = await htmlToImg(replacedContent, width, height);
+          return [h.image(png, "image/png")];
         } catch (err) {
           logger.error(err);
           return "渲染失败，不知道发生了啥";
@@ -388,6 +385,30 @@ export async function apply(ctx: Context, config: Config) {
         }
       }
     });
+
+  async function htmlToImg(html: string, width: number, height: number) {
+    const reactElement =
+      ctx.toImageService.toReactElement.htmlToReactElement(html);
+    const svg = await ctx.toImageService.reactElementToSvg.satori(
+      reactElement,
+      {
+        width,
+        height,
+      },
+    );
+
+    if (config.imgQuality === 100) {
+      return await ctx.toImageService.svgToImage.vips(svg, {
+        format: "png",
+      });
+    }
+    return await ctx.toImageService.svgToImage.vips(svg, {
+      format: "jpeg",
+      options: {
+        Q: config.imgQuality,
+      },
+    });
+  }
 
   function getUserKey(session: Session) {
     let etime = new Date().setHours(0, 0, 0, 0);
@@ -439,7 +460,9 @@ export async function apply(ctx: Context, config: Config) {
 
     const imgType = await fileType.fileTypeFromBuffer(imgData);
 
-    let img: Vips.Image;
+    const vips = ctx.toImageService.toImageBase.getVips();
+
+    let img: InstanceType<typeof vips.Image>;
     let metaData: ImgMetaData;
     const touchImg = () => {
       if (!img) {
