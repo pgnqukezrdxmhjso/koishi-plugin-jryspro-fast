@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-jryspro-fast",
-  "version": "2.2.3",
+  "version": "2.2.5",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "homepage": "https://github.com/pgnqukezrdxmhjso/koishi-plugin-jryspro-fast",
@@ -55,6 +55,6 @@
     "file-type": "^21.3.0"
   },
   "devDependencies": {
-    "koishi-plugin-to-image-service": "^0.1.0"
+    "koishi-plugin-to-image-service": "^1.0.1"
   }
 }

@@ -387,26 +387,15 @@ export async function apply(ctx: Context, config: Config) {
     });
 
   async function htmlToImg(html: string, width: number, height: number) {
-    const reactElement =
-      ctx.toImageService.toReactElement.htmlToReactElement(html);
-    const svg = await ctx.toImageService.reactElementToSvg.satori(
-      reactElement,
-      {
-        width,
-        height,
-      },
-    );
-
-    if (config.imgQuality === 100) {
-      return await ctx.toImageService.svgToImage.vips(svg, {
-        format: "png",
-      });
-    }
-    return await ctx.toImageService.svgToImage.vips(svg, {
-      format: "jpeg",
-      options: {
-        Q: config.imgQuality,
-      },
+    return await ctx.toImageService.htmlToImage(html, {
+      width: width,
+      height: height,
+      ...(config.imgQuality === 100
+        ? {}
+        : {
+            format: "jpeg",
+            quality: config.imgQuality,
+          }),
     });
   }
 
@@ -460,39 +449,36 @@ export async function apply(ctx: Context, config: Config) {
 
     const imgType = await fileType.fileTypeFromBuffer(imgData);
 
-    const vips = ctx.toImageService.toImageBase.getVips();
-
-    let img: InstanceType<typeof vips.Image>;
+    const sharp = await ctx.toImageService.sharpRenderer.getSharp();
+    let img: ReturnType<typeof sharp>;
     let metaData: ImgMetaData;
     const touchImg = () => {
       if (!img) {
-        img = vips.Image.newFromBuffer(imgData);
+        img = sharp(imgData);
       }
     };
 
     if (needMetadata) {
       touchImg();
+      const metadata = await img.metadata();
       metaData = {
-        width: img.width,
-        height: img.height,
+        width: metadata.width,
+        height: metadata.height,
       };
     }
 
     if (cover) {
-      img = vips.Image.thumbnailBuffer(imgData, cover.width, {
-        height: cover.height,
-        crop: vips.Interesting.centre,
-      });
-
+      touchImg();
+      img.resize(cover.width, cover.height);
       if (imgType.ext !== "webp") {
-        imgData = Buffer.from(img.pngsaveBuffer());
+        imgData = Buffer.from(await img.toBuffer());
       }
     }
 
     let mime = imgType.mime;
     if (imgType.ext === "webp") {
       touchImg();
-      imgData = Buffer.from(img.pngsaveBuffer());
+      imgData = Buffer.from(await img.png().toBuffer());
       mime = "image/png";
     }
     return {
