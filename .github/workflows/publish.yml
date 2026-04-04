@@ -1,4 +1,4 @@
-name: Publish
+name: Publish to npm
 
 on:
   push:
@@ -6,13 +6,17 @@ on:
       - main
       - master
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   check_version:
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.check.outputs.new_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check version exists on npm
         id: check
         run: |
@@ -30,7 +34,30 @@ jobs:
   publish_npm:
     needs: check_version
     if: needs.check_version.outputs.new_version == 'true'
-    permissions:
-      id-token: write
-      contents: read
-    uses: koikirin/buildplate/.github/workflows/publish_npm.buildplate.yml@v1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out koishijs
+        uses: actions/checkout@v6
+        with:
+          repository: koishijs/boilerplate
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          path: external/source
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: |
+          yarn --no-immutable
+          yarn yakumo prepare
+          yarn yakumo resolution
+          yarn --no-immutable
+      - name: Check visibility
+        if: github.event.repository.private == true
+        run: yarn config set npmPublishProvenance false
+      - name: Build
+        run: yarn build
+      - name: Publish
+        run: yarn pub --debug
