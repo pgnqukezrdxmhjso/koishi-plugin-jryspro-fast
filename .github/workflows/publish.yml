@@ -7,7 +7,29 @@ on:
       - master
 
 jobs:
+  check_version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.check.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version exists on npm
+        id: check
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+          if ! npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version > /dev/null 2>&1; then
+            echo "new_version=true" >> $GITHUB_OUTPUT
+            echo "Detected new version: $PACKAGE_VERSION. Proceeding to publish."
+          else
+            echo "new_version=false" >> $GITHUB_OUTPUT
+            echo "Version $PACKAGE_VERSION already exists on npm. Skipping."
+          fi
+
   publish_npm:
+    needs: check_version
+    if: needs.check_version.outputs.new_version == 'true'
     permissions:
       id-token: write
       contents: read
