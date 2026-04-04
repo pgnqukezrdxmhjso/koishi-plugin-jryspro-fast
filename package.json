@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-jryspro-fast",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "homepage": "https://github.com/pgnqukezrdxmhjso/koishi-plugin-jryspro-fast",
@@ -9,6 +9,7 @@
     "url": "git+https://github.com/pgnqukezrdxmhjso/koishi-plugin-jryspro-fast.git"
   },
   "scripts": {
+    "bump": "cd ../../ && yarn bump -3 jryspro-fast",
     "build": "cd ../../ && yarn build jryspro-fast",
     "up": "npx npm-check -u --no-color"
   },
