@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish to NPM
 
 on:
   push:
@@ -6,58 +6,9 @@ on:
       - main
       - master
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
-  check_version:
-    runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.check.outputs.new_version }}
-    steps:
-      - uses: actions/checkout@v6
-      - name: Check version exists on npm
-        id: check
-        run: |
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-
-          if ! npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version > /dev/null 2>&1; then
-            echo "new_version=true" >> $GITHUB_OUTPUT
-            echo "Detected new version: $PACKAGE_VERSION. Proceeding to publish."
-          else
-            echo "new_version=false" >> $GITHUB_OUTPUT
-            echo "Version $PACKAGE_VERSION already exists on npm. Skipping."
-          fi
-
   publish_npm:
-    needs: check_version
-    if: needs.check_version.outputs.new_version == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out koishijs
-        uses: actions/checkout@v6
-        with:
-          repository: koishijs/boilerplate
-      - name: Check out source
-        uses: actions/checkout@v6
-        with:
-          path: external/source
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install
-        run: |
-          yarn --no-immutable
-          yarn yakumo prepare
-          yarn yakumo resolution
-          yarn --no-immutable
-      - name: Check visibility
-        if: github.event.repository.private == true
-        run: yarn config set npmPublishProvenance false
-      - name: Build
-        run: yarn build
-      - name: Publish
-        run: yarn pub --debug
+    permissions:
+      id-token: write
+      contents: read
+    uses: pgnqukezrdxmhjso/koishi-plugin-rzgtboeyndxsklmq-commons/.github/workflows/publish_npm.yml@06bfef5f1aff63aeacc5fc4e1ce09efb29fe4806
