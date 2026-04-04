@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-
 import type * as FileType from "file-type";
-
 import { Context, h, Logger, Random, Schema, Session } from "koishi";
+import { Files } from "koishi-plugin-rzgtboeyndxsklmq-commons";
+
 // noinspection ES6UnusedImports
 import {} from "koishi-plugin-rate-limit";
 // noinspection ES6UnusedImports
@@ -34,7 +34,7 @@ export const usage = `
 * 例: https://api.example.com/img?#e#  ==等价于== https://api.example.com/img?271878
 * 例: https://api.example.com/img?type=acc&v=#e#  ==等价于== https://api.example.com/img?type=acc&v=271878
 
-imgApi与subimgApi支持本地文件夹绝对路径和http(s)等网络api
+imgApi与subimgApi支持本地文件夹绝对路径和相对koishi路径和http(s)等网络api
 `;
 
 export interface Config {
@@ -95,7 +95,7 @@ export const schema = Schema.object({
     ),
   avatarUrl: Schema.string()
     .role("link")
-    .description("默认头像URL(https?://或者file:///)"),
+    .description("默认头像URL(https?://或者图片文件路径)"),
 });
 
 export const inject = ["toImageService", "database"];
@@ -193,28 +193,16 @@ export async function apply(ctx: Context, config: Config) {
         backgroundUrl = config.imgApi.replace(/#e#$/gi, eTime);
       } else {
         backgroundUrl =
-          "file:///" +
-          path.resolve(
-            __dirname,
-            config.imgApi,
-            "." + path.sep,
-            Random.pick(await getFolderImg(config.imgApi)),
-          );
+          "file:///" + Random.pick(await getFolderImg(config.imgApi));
       }
 
       let subImgUrl: string;
       if (config.subimgApi) {
         if (/^https?:\/\//i.test(config.subimgApi)) {
-          subImgUrl = config.imgApi.replace(/#e#$/gi, eTime);
+          subImgUrl = config.subimgApi.replace(/#e#$/gi, eTime);
         } else {
           subImgUrl =
-            "file:///" +
-            path.resolve(
-              __dirname,
-              config.subimgApi,
-              "." + path.sep,
-              Random.pick(await getFolderImg(config.subimgApi)),
-            );
+            "file:///" + Random.pick(await getFolderImg(config.subimgApi));
         }
       }
 
@@ -440,11 +428,9 @@ export async function apply(ctx: Context, config: Config) {
     let imgData: Buffer;
     if (/^https?:/i.test(url)) {
       imgData = Buffer.from(await ctx.http.get<ArrayBuffer>(url));
-    } else if (/^file:/i.test(url)) {
-      imgData = await fs.promises.readFile(url.replace(/^file:\/+/, ""));
     } else {
-      logger.error("未知url类型");
-      throw "渲染失败，不知道发生了啥";
+      url = handleFilePath(url.replace(/^file:\/+/, ""));
+      imgData = await fs.promises.readFile(url);
     }
 
     const imgType = await fileType.fileTypeFromBuffer(imgData);
@@ -486,30 +472,15 @@ export async function apply(ctx: Context, config: Config) {
       metaData,
     };
   }
-}
 
-async function getFolderImg(folder: string) {
-  return readFileNames(folder, (fileName) =>
-    /\.(png|jpg|jpeg|webp|svg)$/i.test(fileName),
-  );
-}
+  function handleFilePath(filePath: string) {
+    return fs.existsSync(filePath)
+      ? filePath
+      : path.relative(ctx.baseDir, filePath);
+  }
 
-function readFileNames(
-  dirPath: string,
-  verify: (fileName: string) => boolean,
-  basePath: string = "",
-) {
-  let filenames = [];
-  const files = fs.readdirSync(dirPath);
-  files.forEach((filename) => {
-    const fullPath = path.join(dirPath, filename);
-    if (fs.statSync(fullPath).isDirectory()) {
-      filenames.push(
-        ...readFileNames(fullPath, verify, path.join(basePath, filename)),
-      );
-    } else if (verify(filename)) {
-      filenames.push(path.join(basePath, filename));
-    }
-  });
-  return filenames;
+  async function getFolderImg(folder: string) {
+    let files = await Files.readDirFiles(handleFilePath(folder));
+    return files.filter((f) => /\.(png|jpg|jpeg|webp|svg)$/i.test(f));
+  }
 }

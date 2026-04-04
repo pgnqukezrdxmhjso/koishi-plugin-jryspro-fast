@@ -10,9 +10,7 @@
   },
   "scripts": {
     "build": "cd ../../ && yarn build jryspro-fast",
-    "pub": "cd ../../ && yarn pub jryspro-fast",
-    "fastPub": "cd ../../ && yarn bump -3 jryspro-fast && yarn build jryspro-fast && yarn pub jryspro-fast",
-    "test": "node src/test/test.js"
+    "up": "npx npm-check -u --no-color"
   },
   "contributors": [
     "Twiyin0 <twiyin0@outlook.com>",
@@ -52,9 +50,11 @@
     "koishi": "^4.18.10"
   },
   "dependencies": {
-    "file-type": "^21.3.0"
+    "file-type": "^22.0.0",
+    "koishi-plugin-rzgtboeyndxsklmq-commons": "^1.1.0"
   },
   "devDependencies": {
-    "koishi-plugin-to-image-service": "^1.0.1"
+    "koishi-plugin-rate-limit": "^2.0.4",
+    "koishi-plugin-to-image-service": "^1.6.2"
   }
 }

@@ -1,9 +1,9 @@
-import ToImageService from "koishi-plugin-to-image-service";
+import { loadService } from "./testBase";
 import fs from "node:fs/promises";
 
 (async () => {
-  const toImageService = new ToImageService({} as any, {});
-  await toImageService.start();
+  const toImageService = await loadService();
+
   let html = await fs.readFile("../../assets/template.html", {
     encoding: "utf-8",
   });
@@ -12,17 +12,10 @@ import fs from "node:fs/promises";
     .trim();
   console.log(html);
 
-  console.time("to svg");
-  const reactElement = toImageService.toReactElement.htmlToReactElement(html);
-  const svg = await toImageService.reactElementToSvg.satori(reactElement, {
+  console.time("to png");
+  const png = await toImageService.htmlToImage(html, {
     width: 640,
     height: 1080,
-  });
-  console.timeEnd("to svg");
-
-  console.time("to png");
-  const png = await toImageService.svgToImage.vips(svg, {
-    format: "png",
   });
   console.timeEnd("to png");
   await fs.writeFile("./templateToPng.png", png);
